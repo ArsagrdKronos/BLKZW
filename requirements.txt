@@ -1,0 +1,1 @@
+pip install  requests python-whois dnspython paramiko beautifulsoup4 websocket-client colorama

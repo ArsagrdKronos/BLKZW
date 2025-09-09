@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# GCH.sss - Zaawansowany silnik skryptu do dogłębnej analizy WebSocket
+# Opcje: test połączenia WS, pobieranie wersji serwera, nagłówków, analiza szczegółów strony
+
+# Funkcja do analizy parametrów
+function analyze_params() {
+    echo "Analiza parametrów ($#): $@"
+    local count=0
+    for param in "$@"; do
+        ((count++))
+        echo "Parametr $count: $param"
+        if [[ $param == *"ws://"* || $param == *"wss://"* ]]; then
+            echo "Wykryto URL WebSocket: $param"
+        fi
+    done
+    if [ $# -gt 5 ]; then
+        echo "Przesunięcie parametrów (shift 5) ze względu na dużą liczbę"
+        shift 5
+        echo "Pozostałe parametry: $@"
+    fi
+}
+
+# Funkcja do wczytywania danych interaktywnie
+function read_input() {
+    while true; do
+        read -p "Podaj URL WebSocket (np. wss://example.com/ws) lub 'q' aby wyjść: " ws_url
+        if [[ $ws_url == "q" ]]; then
+            exit 0
+        elif [[ $ws_url == *"ws://"* || $ws_url == *"wss://"* ]]; then
+            echo "Wczytano poprawny URL: $ws_url"
+            break
+        else
+            echo "Błąd: Nieprawidłowy URL WebSocket. Spróbuj ponownie."
+        fi
+    done
+}
+
+# Funkcja do testowania WebSocket
+function test_websocket() {
+    local host="$1"
+    local ws_url="${2:-wss://$host/ws}"
+    echo "Dogłębna analiza WebSocket dla: $ws_url"
+
+    # Test połączenia WebSocket z użyciem curl
+    response=$(curl -i -N -s -S \
+        -H "Connection: Upgrade" \
+        -H "Upgrade: websocket" \
+        -H "Host: $host" \
+        -H "Origin: https://$host" \
+        -H "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+        -H "Sec-WebSocket-Version: 13" \
+        --http1.1 \
+        "$ws_url" 2>&1)
+
+    if [[ $? -ne 0 ]]; then
+        echo "Błąd połączenia WebSocket: $response"
+        return 1
+    fi
+
+    # Analiza odpowiedzi
+    server_version=$(echo "$response" | grep -i "Server:" | awk '{print $2}')
+    status_code=$(echo "$response" | grep "HTTP/" | awk '{print $2}')
+    upgrade_status=$(echo "$response" | grep -i "Upgrade: websocket")
+    sec_key=$(echo "$response" | grep -i "Sec-WebSocket-Accept")
+
+    echo "Status HTTP: $status_code"
+    echo "Wersja serwera: ${server_version:-Nie wykryto}"
+    echo "Upgrade do WebSocket: ${upgrade_status:-Nie wykryto}"
+    echo "Klucz akceptacji: ${sec_key:-Nie wykryto}"
+    echo "Pełna odpowiedź: $response"
+
+    # Szczegółowa analiza nagłówków
+    echo "Szczegółowa analiza nagłówków:"
+    echo "$response" | while IFS= read -r line; do
+        if [[ $line == *":"* ]]; then
+            echo "Nagłówek: $line"
+        fi
+    done
+}
+
+# Główna funkcja silnika
+function script_engine() {
+    local host="$1"
+    echo "Uruchamianie zaawansowanego silnika skryptu dla hosta: $host"
+    analyze_params "$@"
+    read_input
+    test_websocket "$host" "$ws_url"
+    echo "Wynik analizy zapisano do ws_analysis_output.txt" > ws_analysis_output.txt
+    return $?
+}
+
+# Sprawdzenie argumentów
+if [ -z "$1" ]; then
+    echo "Błąd: Podaj host jako argument! (np. ./gch.sss example.com)"
+    exit 1
+fi
+
+# Uruchomienie silnika
+script_engine "$@"
+exit $?
