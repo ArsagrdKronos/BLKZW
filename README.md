@@ -90,7 +90,7 @@ Czy chcesz, abym wygenerował obraz zrzutu ekranu interfejsu? (Potwierdź, a prz
 - **Logi**: Wyniki zapisywane są w `network_analysis_log.txt` dla audytu.
 - **Ograniczenia**: Narzędzie nie zawiera exploitów ani funkcji do ataków (np. XSS, SQLi).
 
-## 👥 Twórcy
+## 👥 Twórca
 
 - **@ArsagrdKronos** 🧑‍💻
 
